@@ -2,55 +2,58 @@
 
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useMutation } from 'react-query';
+import { useMutation, useQueryClient } from 'react-query';
 import { FaCloudUploadAlt } from 'react-icons/fa';
 
-const uploadImage = async (image: File) => {
-  const formData = new FormData();
-  formData.append('file', image);
-  console.log('Uploading image:', image);
-  const response = await axios.post('https://api.escuelajs.co/api/v1/files/upload', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  console.log('Upload response:', response);
-  return response.data.location; // Adjust according to the actual response structure
+const uploadImages = async (images: FileList) => {
+  const imageUrls: string[] = [];
+  for (let i = 0; i < images.length; i++) {
+    const formData = new FormData();
+    formData.append('file', images[i]);
+    const response = await axios.post('https://api.escuelajs.co/api/v1/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    imageUrls.push(response.data.location); 
+  }
+  return imageUrls;
 };
 
-const ImageUploadPage = () => {
+const ImageUploadPage: React.FC = () => {
+  const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [productName, setProductName] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
-  const [image, setImage] = useState<File | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [images, setImages] = useState<FileList | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
-  const mutation = useMutation(uploadImage, {
+  const mutation = useMutation(uploadImages, {
     onSuccess: (data) => {
-      console.log('Image uploaded successfully:', data);
-      setImageUrl(data);
-      alert('Image uploaded successfully!');
+      setImageUrls(data);
+      alert('Images uploaded successfully!');
+      queryClient.invalidateQueries('product'); // Invalidate queries to refetch product data
     },
     onError: (error) => {
-      console.error('Error uploading image:', error);
-      alert('Error uploading image.');
+      console.error('Error uploading images:', error);
+      alert('Error uploading images.');
     },
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setImage(e.target.files[0]);
-      console.log('Selected image:', e.target.files[0]);
+    if (e.target.files) {
+      setImages(e.target.files);
+      console.log('Selected images:', e.target.files);
     }
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (image) {
-      mutation.mutate(image);
+    if (images) {
+      mutation.mutate(images);
     } else {
-      alert('Please select an image');
+      alert('Please select images');
     }
   };
 
@@ -95,15 +98,16 @@ const ImageUploadPage = () => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Изображение</label>
+            <label className="block text-gray-700 text-sm font-bold mb-2">Изображения</label>
             <div className="flex items-center justify-center w-full">
               <label className="flex flex-col items-center justify-center w-full h-64 bg-gray-200 border-2 border-dashed border-gray-400 rounded-lg cursor-pointer hover:bg-gray-300">
                 <div className="flex flex-col items-center justify-center pt-7">
                   <FaCloudUploadAlt className="w-12 h-12 text-gray-500" />
-                  <p className="pt-1 text-sm tracking-wider text-gray-500">Select an image</p>
+                  <p className="pt-1 text-sm tracking-wider text-gray-500">Выберите изображения</p>
                 </div>
                 <input
                   type="file"
+                  multiple
                   className="opacity-0"
                   onChange={handleImageChange}
                   required
@@ -116,15 +120,19 @@ const ImageUploadPage = () => {
             className="w-full bg-[#002F34] text-white py-2 px-4 rounded-lg hover:bg-[#004f64]"
             disabled={mutation.isLoading}
           >
-            {mutation.isLoading ? 'Uploading...' : 'Upload Image'}
+            {mutation.isLoading ? 'Uploading...' : 'Upload Images'}
           </button>
         </form>
-        {imageUrl && (
+        {imageUrls.length > 0 && (
           <div className="mt-8 text-center">
-            <h2 className="text-xl font-bold mb-2">Uploaded Image URL:</h2>
-            <a href={imageUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
-              {imageUrl}
-            </a>
+            <h2 className="text-xl font-bold mb-2">Uploaded Images URLs:</h2>
+            {imageUrls.map((url, index) => (
+              <div key={index} className="mb-2">
+                <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+                  {url}
+                </a>
+              </div>
+            ))}
           </div>
         )}
       </main>

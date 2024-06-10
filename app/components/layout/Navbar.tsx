@@ -20,7 +20,7 @@ const Navbar = () => {
         </div>
         <nav className="flex items-center gap-2 sm:gap-4 text-sm sm:text-lg px-2 sm:px-8">
           <div className='flex flex-nowrap items-center'> 
-            <Link href="/favorites">
+            <Link href="#">
               <div  
                 className="flex items-center bg-[#002F34] text-white px-2 py-1 sm:px-4 sm:py-2 rounded-md font-bold hover:bg-olxYellow ml-2 sm:ml-4 hover:underline" 
               > 
